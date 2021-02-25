@@ -1,16 +1,9 @@
 """ Method:
-First move place in centre of board
-Second move next to first piece
-If can win -> win
-Check where opponent is near winning and block
-Block opponent if he is within few steps of winning
-Aim to draw 3 x 3 L shape in pieces
-- If two in a row with a space then add 3rd.
-- If one with free on both sides then add 2nd.
-Then make one of the lines length 4
-
-Don't want to search for rows and diagonals from every point, so instead look for a piece, once found start the count, --
--- then count until empty or opposite piece is found, evaluate if count reaches target.
+- First move: place in centre of board
+- Calculate score from each board as heuristic
+- Minimax function attempts to minimise/maximise score
+- AB pruning implemented inside minimax function
+to prevent searching routes that don't need searching
 """
 
 import numpy as np
@@ -19,6 +12,7 @@ from misc import legalMove, winningTest
 from gomokuAgent import GomokuAgent
 
 
+# Returns the first position that has X in a line, used for searching for winning moves.
 def nInARowMove(playerID, board, X_IN_A_LINE):
     # BOARD_SIZE = board.shape[0]
     # mask = np.ones(X_IN_A_LINE, dtype=int) * playerID
@@ -94,6 +88,7 @@ def evaluateScore(playerID, board):
     score += diagCount(playerID, board, 3) * 3
     score += diagCount(playerID, board, 2)
     return score
+
 
 def minimax(board, depth, alpha, beta, maximizingPlayer):
     if maximizingPlayer == 1:
@@ -173,23 +168,5 @@ class Player(GomokuAgent):
             return 5, 5
         if legalMove(board, (5, 6)):
             return 5, 6
-        # # Look for row positions to win from
-        # winningRowMoveTest = winningRowMove(self.ID, board, 5)
-        # if winningRowMoveTest is not None:
-        #     return winningRowMoveTest
-        #
-        # # Look for row positions with board turned 90
-        # boardPrime = np.rot90(board)
-        # winningRowMoveTest = winningRowMove(self.ID, boardPrime, 5)
-        # if winningRowMoveTest is not None:
-        #     # Rotate i and j back as board has been rotated
-        #     return np.flip(winningRowMoveTest)
-        #
-        # # Look for diagonal positions
-        # winningDiagMoveTest = winningDiagTest(self.ID, board, 5)
-        # while True:
-        #     moveLoc = tuple(np.random.randint(self.BOARD_SIZE, size=2))
-        #     if legalMove(board, moveLoc):
-        #         return moveLoc
         x, i, j = minimax(board, 3, -np.inf, np.inf, self.ID)
         return i, j
