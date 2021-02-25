@@ -19,7 +19,6 @@ from misc import legalMove, winningTest
 from gomokuAgent import GomokuAgent
 
 
-
 def nInARowMove(playerID, board, X_IN_A_LINE):
     # BOARD_SIZE = board.shape[0]
     # mask = np.ones(X_IN_A_LINE, dtype=int) * playerID
@@ -35,7 +34,7 @@ def nInARowMove(playerID, board, X_IN_A_LINE):
                 count = 0
             else:
                 count += 1
-    return None
+    return None, None
 
 
 def nInARowCount(playerID, board, X_IN_A_LINE):
@@ -75,28 +74,26 @@ def diagCount(playerID, board, X_IN_A_LINE):
 # Evaluation of the board state for the heuristic to be used in min max algorithm.
 # Looks for, firstly, places where 5 in a row is possible with spaces on either end,
 # then 4, 3, 2; each one weighted, as having larger lines is of course more important.
-def evaluateScore(board, playerID):
-    score = 0
-    score += nInARowCount(playerID, board, 5) * np.inf
-    score += nInARowCount(playerID, board, 4) * 4
+def evaluateScore(playerID, board):
+    if nInARowCount(playerID, board, 5) != 0 or diagCount(playerID, board, 5) != 0:
+        return np.inf
+    score = nInARowCount(playerID, board, 4) * 4
     score += nInARowCount(playerID, board, 3) * 3
     score += nInARowCount(playerID, board, 2)
-    score += diagCount(playerID, board, 5) * np.inf
     score += diagCount(playerID, board, 4) * 4
     score += diagCount(playerID, board, 3) * 3
     score += diagCount(playerID, board, 2)
     # Rotate the board then re-count and add horizontal and diagonal lines
     np.rot90(board)
-    score += nInARowCount(playerID, board, 5) * np.inf
+    if nInARowCount(playerID, board, 5) != 0 or diagCount(playerID, board, 5) != 0:
+        return np.inf
     score += nInARowCount(playerID, board, 4) * 4
     score += nInARowCount(playerID, board, 3) * 3
     score += nInARowCount(playerID, board, 2)
-    score += diagCount(playerID, board, 5) * np.inf
     score += diagCount(playerID, board, 4) * 4
     score += diagCount(playerID, board, 3) * 3
     score += diagCount(playerID, board, 2)
-    # Could have looped through these but would look messier and been more confusing
-
+    return score
 
 def minimax(board, depth, alpha, beta, maximizingPlayer):
     if maximizingPlayer == 1:
@@ -104,35 +101,35 @@ def minimax(board, depth, alpha, beta, maximizingPlayer):
     else:
         minimizingPlayer = 1
     moveLoc = nInARowMove(maximizingPlayer, board, 5)
-    if depth == 0 or moveLoc is not None:
-        return evaluateScore(board, maximizingPlayer), moveLoc
+    if depth == 0 or moveLoc != (None, None):
+        return evaluateScore(maximizingPlayer, board), moveLoc
 
     if maximizingPlayer:
-        maxEval = -np.inf
-        for child[0] in children(maximizingPlayer, board):
-            eval, positionI, positionJ = minimax(child, depth - 1, alpha, beta, minimizingPlayer)
-            maxEval = max(maxEval, eval)
-            alpha = max(alpha, eval)
+        maxEval = [1_000_000, None, None]
+        for child in children(maximizingPlayer, board):
+            evaluation = minimax(child[0], depth - 1, alpha, beta, minimizingPlayer)
+            maxEval = maxEval if maxEval[0] > evaluation[0] else [evaluation[0], child[1], child[2]]
+            alpha = max(alpha, evaluation[0])
             if beta <= alpha:
                 break
-        return maxEval, child[1], child[2]
+        return maxEval
 
     else:
-        minEval = np.inf
-        for child[0] in children(minimizingPlayer, board):
-            eval, positionI, positionJ = minimax(child, depth - 1, alpha, beta, maximizingPlayer)
-            minEval = min(minEval, eval)
-            beta = min(beta, eval)
+        minEval = [1_000_000, None, None]
+        for child in children(minimizingPlayer, board):
+            evaluation = minimax(child[0], depth - 1, alpha, beta, maximizingPlayer)
+            minEval = minEval if minEval[0] < evaluation[0] else [evaluation[0], child[1], child[2]]
+            beta = min(beta, evaluation[0])
             if beta <= alpha:
                 break
-        return minEval, child[1], child[2]
+        return minEval
 
 
-# Return list of board states after possible moves have taken place
+# Return list of board states and their moves after all viable moves have taken place
 def children(playerID, board):
-    boardList = [[]]
-    for i in range(0, 11):
-        for j in range(0, 11):
+    boardList = []
+    for i in range(0, 10):
+        for j in range(0, 10):
             if board[i][j] == 0:
                 if board[i + 1][j] != 0:
                     tempBoard = board.copy()
@@ -194,5 +191,5 @@ class Player(GomokuAgent):
         #     moveLoc = tuple(np.random.randint(self.BOARD_SIZE, size=2))
         #     if legalMove(board, moveLoc):
         #         return moveLoc
-        x, i, j = minimax(board, 2, -np.inf, np.inf, self.ID)
+        x, i, j = minimax(board, 3, -np.inf, np.inf, self.ID)
         return i, j
